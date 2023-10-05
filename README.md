@@ -5,19 +5,35 @@ When you work with WinForms or WPF you will be limited to work with the SerialPo
 SerialPortManager seeks to overcome that by using Windows Management Instrumentation (WMI). It returns a deviceID (A port name) which you can then use with the old SerialPort API.
 
 Add the SerialPortManager.cs to your project and create the object like:
-`SerialPortManager serialPortManager = new SerialPortManager();`
+```C#
+SerialPortManager serialPortManager = new SerialPortManager();
+```
 
 or if you are only interested in certain devices like your Arduino or Raspberry Pico you can pass in the Vendor and/or Product ID
 
-`SerialPortManager serialPortManager = new SerialPortManager(0x2e8a, 0x0722);`
+```C#
+SerialPortManager serialPortManager = new SerialPortManager(0x2e8a, 0x0722);
+```
+or
+```C#
+SerialPortManager serialPortManager = new SerialPortManager(0, 0x0722);
+```
+or
+```C#
+SerialPortManager serialPortManager = new SerialPortManager(11914);
+```
 
-`SerialPortManager serialPortManager = new SerialPortManager(0, 0x0722);`
+To start the port monitoring process you call 
+```C#
+serialPortManager.scan();
+```
 
-`SerialPortManager serialPortManager = new SerialPortManager(0x2e8a);`
+This starts the port monitoring AND find all the ports currently connected.
 
-Call `serialPortManager.scan();` To find the ports currently connencted. At the same time the SerialPortManager will monitor ports disapear or new ports appear and fire the appropriate event.
-
-Call `serialPortManager.scan(false);` If you only want a portscan and not have WMI monitor changes in the ports available.
+If are not interested in changes to the ports available and only want to find the current ports you pass in `false`
+```C#
+serialPortManager.scan(false);
+```
 
 ## Complete program
 
