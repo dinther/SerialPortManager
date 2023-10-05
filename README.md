@@ -1,8 +1,8 @@
 # SerialPortManager
 
-When you work with WinForms or WPF you will be limited to work with the SerialPort API. Although there is the ScanPorts API call, all that does is read the registry with all the caching issues that come along with that.
+When you work with WinForms or WPF you will be limited to work with the SerialPort API. Although there is the ScanPorts API call, all that does is read the registry with all the caching issues that come along with that. The VendorId and ProductID from the serial USB device are completely hidden.
 
-SerialPortManager seeks to overcome that by using Windows Management Instrumentation (WMI) 
+SerialPortManager seeks to overcome that by using Windows Management Instrumentation (WMI). It returns a deviceID (A port name) which you can then use with the old SerialPort API.
 
 Add the SerialPortManager.cs to your project and create the object like:
 `SerialPortManager serialPortManager = new SerialPortManager();`
