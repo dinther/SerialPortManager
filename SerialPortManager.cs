@@ -3,7 +3,7 @@ using System.Management;
 
 //  SerialPort manager for C# WPF using Windows Management Instrumentation (WMI)
 //  This monitor will produce "Port added", "Port Removed" and "Port Found" events
-//  and include the portname when an event is raised.
+//  and include the DeviceID, VendorID and ProductID in the EventArgs when an event is raised.
 //
 //  Make sure to install System.Management in your projects references.
 //
@@ -22,11 +22,15 @@ using System.Management;
 
 public class SerialPortEventArgs : EventArgs
 {
-    public SerialPortEventArgs(string portName)
+    public SerialPortEventArgs(string deviceID, int vendorID, int productID)
     {
-        PortName = portName;
+        DeviceID = deviceID;
+        VendorID = vendorID;
+        ProductID = productID;
     }
-    public string PortName;
+    public string DeviceID;
+    public int VendorID;
+    public int ProductID;
 }
 
 public class SerialPortManager
@@ -34,18 +38,20 @@ public class SerialPortManager
     public event EventHandler<SerialPortEventArgs> OnPortFoundEvent;
     public event EventHandler<SerialPortEventArgs> OnPortAddedEvent;
     public event EventHandler<SerialPortEventArgs> OnPortRemovedEvent;
-    static ManagementEventWatcher watchingAddedObject = null;
-    static ManagementEventWatcher watchingRemovedObject = null;
-    static WqlEventQuery watcherQuery;
-    static ManagementScope scope;
-    public int VendorID = 0;
-    public int ProductID = 0;
-    public SerialPortManager(int vendorID = 0, int productID = 0)
+    private static ManagementEventWatcher _watchingAddedObject = null;
+    private static ManagementEventWatcher _watchingRemovedObject = null;
+    private static WqlEventQuery _watcherQuery;
+    private static ManagementScope _scope;
+    private int _vendorID;
+    private int _productID;
+    public int VendorID { get { return _vendorID; } }
+    public int ProductID { get { return _productID; } }
+    public SerialPortManager(int VendorID = 0, int ProductID = 0)
     {
-        VendorID = vendorID;
-        ProductID = productID;
-        scope = new ManagementScope("root/CIMV2");
-        scope.Options.EnablePrivileges = true;
+        _vendorID = VendorID;
+        _productID = ProductID;
+        _scope = new ManagementScope("root/CIMV2");
+        _scope.Options.EnablePrivileges = true;
         AddInsertUSBHandler();
         AddRemoveUSBHandler();
     }
@@ -54,21 +60,21 @@ public class SerialPortManager
     {
         try
         {
-            bool checkID = VendorID + ProductID != 0;
+            bool checkID = _vendorID + _productID != 0;
             string queryString = "SELECT DeviceID, PNPDeviceID FROM Win32_SerialPort";
             if (checkID) queryString += " WHERE ";
-            if (VendorID != 0) queryString += "PNPDeviceID Like '%VID_" + VendorID.ToString("X4") + "%'";
-            if (VendorID != 0 && ProductID != 0) queryString += " AND ";
-            if (ProductID != 0) queryString += "PNPDeviceID Like '%PID_" + ProductID.ToString("X4") + "%'";
+            if (_vendorID != 0) queryString += "PNPDeviceID Like '%VID_" + _vendorID.ToString("X4") + "%'";
+            if (_vendorID != 0 && _productID != 0) queryString += " AND ";
+            if (_productID != 0) queryString += "PNPDeviceID Like '%PID_" + _productID.ToString("X4") + "%'";
             ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2", queryString);
             foreach (ManagementObject queryObj in searcher.Get())
             {
-                  DoPortFoundEvent((string)queryObj["DeviceID"]);
+                DoPortFoundEvent(CreatePortArgs(queryObj));
             }
             if (watchForChanges)
             {
-                watchingAddedObject.Start();
-                watchingRemovedObject.Start();
+                _watchingAddedObject.Start();
+                _watchingRemovedObject.Start();
             }
         }
         catch (ManagementException e)
@@ -79,22 +85,42 @@ public class SerialPortManager
 
     public void stop()
     {
-        watchingAddedObject.Stop();
-        watchingRemovedObject.Stop();
+        _watchingAddedObject.Stop();
+        _watchingRemovedObject.Stop();
+    }
+
+    private SerialPortEventArgs CreatePortArgs(ManagementBaseObject queryObj)
+    {
+        string PNPDeviceID = ((string)queryObj.GetPropertyValue("PNPDeviceID")).ToUpper();
+        int vid = 0;
+        int pid = 0;
+        int index = PNPDeviceID.IndexOf("VID_");
+        if (index > -1 && PNPDeviceID.Length >= index + 8)
+        {
+            string id = PNPDeviceID.Substring(index + 4, 4);
+            vid = Convert.ToInt32(id, 16);
+        }
+        index = PNPDeviceID.IndexOf("PID_");
+        if (index > -1 && PNPDeviceID.Length >= index + 8)
+        {
+            string id = PNPDeviceID.Substring(index + 4, 4);
+            pid = Convert.ToInt32(id, 16);
+        }
+        return new SerialPortEventArgs((string)queryObj["DeviceID"], vid, pid);
     }
 
     private void AddInsertUSBHandler()
     {
         try
         {
-            watchingAddedObject = USBWatcherSetUp("__InstanceCreationEvent");
-            watchingAddedObject.EventArrived += new EventArrivedEventHandler(HandlePortAdded);
+            _watchingAddedObject = USBWatcherSetUp("__InstanceCreationEvent");
+            _watchingAddedObject.EventArrived += new EventArrivedEventHandler(HandlePortAdded);
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-            if (watchingAddedObject != null)
-                watchingAddedObject.Stop();
+            if (_watchingAddedObject != null)
+                _watchingAddedObject.Stop();
         }
     }
 
@@ -102,73 +128,72 @@ public class SerialPortManager
     {
         try
         {
-            watchingRemovedObject = USBWatcherSetUp("__InstanceDeletionEvent");
-            watchingRemovedObject.EventArrived += new EventArrivedEventHandler(HandlePortRemoved);
+            _watchingRemovedObject = USBWatcherSetUp("__InstanceDeletionEvent");
+            _watchingRemovedObject.EventArrived += new EventArrivedEventHandler(HandlePortRemoved);
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-            if (watchingRemovedObject != null)
-                watchingRemovedObject.Stop();
+            if (_watchingRemovedObject != null)
+                _watchingRemovedObject.Stop();
         }
     }
 
     private ManagementEventWatcher USBWatcherSetUp(string eventType)
     {
-        watcherQuery = new WqlEventQuery();
-        watcherQuery.EventClassName = eventType;
-        watcherQuery.WithinInterval = new TimeSpan(0, 0, 2);
-        watcherQuery.Condition = @"TargetInstance ISA 'Win32_SerialPort'";
-        return new ManagementEventWatcher(scope, watcherQuery);
+        _watcherQuery = new WqlEventQuery();
+        _watcherQuery.EventClassName = eventType;
+        _watcherQuery.WithinInterval = new TimeSpan(0, 0, 2);
+        _watcherQuery.Condition = @"TargetInstance ISA 'Win32_SerialPort'";
+        return new ManagementEventWatcher(_scope, _watcherQuery);
     }
 
     private void HandlePortAdded(object sender, EventArrivedEventArgs e)
     {
         var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
-
-
-        bool checkID = VendorID + ProductID != 0;
+        SerialPortEventArgs EventArgs = CreatePortArgs(instance);
+        
+        bool checkID = _vendorID + _productID != 0;
         if (checkID)
         {
             string PNPDeviceID = (string)instance.GetPropertyValue("PNPDeviceID");
-            if ((VendorID==0 || PNPDeviceID.Contains("VID_" + VendorID.ToString("X4"))) &&
-                (ProductID == 0 || PNPDeviceID.Contains("VID_" + ProductID.ToString("X4")))){
-                DoPortAddedEvent((string)instance.GetPropertyValue("DeviceID"));
+            if ((EventArgs.VendorID == 0 || PNPDeviceID.Contains("VID_" + EventArgs.VendorID.ToString("X4"))) &&
+                (EventArgs.ProductID == 0 || PNPDeviceID.Contains("VID_" + EventArgs.ProductID.ToString("X4"))))
+            {
+                DoPortAddedEvent(EventArgs);
             }
         }
-        else
-        {
-            DoPortAddedEvent((string)instance.GetPropertyValue("DeviceID"));
-        }
+        else DoPortAddedEvent(EventArgs);
+        
     }
 
     private void HandlePortRemoved(object sender, EventArrivedEventArgs e)
     {
         var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
-        DoPortRemovedEvent((string)instance.GetPropertyValue("DeviceID"));
+        DoPortRemovedEvent(CreatePortArgs(instance));
     }
 
-    private void DoPortFoundEvent(string portName)
+    private void DoPortFoundEvent(SerialPortEventArgs EventArgs)
     {
         if (OnPortFoundEvent != null)
         {
-            OnPortFoundEvent(this, new SerialPortEventArgs(portName));
+            OnPortFoundEvent(this, EventArgs);
         }
     }
 
-    private void DoPortAddedEvent(string portName)
+    private void DoPortAddedEvent(SerialPortEventArgs EventArgs)
     {
         if (OnPortAddedEvent != null)
         {
-            OnPortAddedEvent(this, new SerialPortEventArgs(portName));
+            OnPortAddedEvent(this, EventArgs);
         }
     }
 
-    private void DoPortRemovedEvent(string portName)
+    private void DoPortRemovedEvent(SerialPortEventArgs EventArgs)
     {
         if (OnPortRemovedEvent != null)
         {
-            OnPortRemovedEvent(this, new SerialPortEventArgs(portName));
+            OnPortRemovedEvent(this, EventArgs);
         }
     }
 }
