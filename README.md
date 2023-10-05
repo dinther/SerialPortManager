@@ -21,7 +21,7 @@ Call `serialPortManager.scan(false);` If you only want a portscan and not have W
 
 ## Complete program
 
-```
+```C#
 using System;
 
 namespace SerialPortManagerDemo
