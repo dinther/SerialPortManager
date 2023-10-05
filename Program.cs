@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SerialPortManagerDemo
 {
@@ -10,23 +6,28 @@ namespace SerialPortManagerDemo
     {
         static void Main(string[] args)
         {
-            SerialPortManager serialPortManager = new SerialPortManager(0x2e8a);
+            SerialPortManager serialPortManager = new SerialPortManager();
+            serialPortManager.OnPortFoundEvent += SerialPortManager_OnPortFoundEvent;
             serialPortManager.OnPortAddedEvent += SerialPortManager_OnPortAddedEvent;
-            serialPortManager.OnPortFoundEvent += SerialPortManager_OnPortAddedEvent;
             serialPortManager.OnPortRemovedEvent += SerialPortManager_OnPortRemovedEvent;
             serialPortManager.scanPorts(true);
             Console.WriteLine("Press CTL C to Exit");
             while (true);
         }
 
+        private static void SerialPortManager_OnPortFoundEvent(object sender, SerialPortEventArgs e)
+        {
+            Console.WriteLine($"{e.DeviceID} VendorID: {e.VendorID} ProductID: {e.ProductID} Found");
+        }
+
         private static void SerialPortManager_OnPortRemovedEvent(object sender, SerialPortEventArgs e)
         {
-            Console.WriteLine($"{e.DeviceID} Removed");
+            Console.WriteLine($"{e.DeviceID} VendorID: {e.VendorID} ProductID: {e.ProductID} Removed");
         }
 
         private static void SerialPortManager_OnPortAddedEvent(object sender, SerialPortEventArgs e)
         {
-            Console.WriteLine($"{e.DeviceID} Added");
+            Console.WriteLine($"{e.DeviceID} VendorID: {e.VendorID} ProductID: {e.ProductID} Added");
         }
     }
 }
