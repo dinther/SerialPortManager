@@ -1,4 +1,4 @@
-# SerialPortManager
+# SerialPortManager for WPF and WinForms
 
 When you work with WinForms or WPF you will be limited to work with the SerialPort API. Although there is the ScanPorts API call, all that does is read the registry with all the caching issues that come along with that. The VendorId and ProductID from the serial USB device are completely hidden.
 
