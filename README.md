@@ -73,6 +73,8 @@ namespace SerialPortManagerDemo
 }
 ```
 
+In most cases you probably handle port found and port added with the same event handler but the differentiation is there if you need it.
+
 ![image](https://github.com/dinther/SerialPortManager/assets/1192916/4b4744de-5da8-4bae-9087-b4058a48fbee)
 
 
