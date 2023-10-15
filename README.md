@@ -9,31 +9,34 @@ Add the SerialPortManager.cs to your project and create the object like:
 SerialPortManager serialPortManager = new SerialPortManager();
 ```
 
-or if you are only interested in certain devices like your Arduino or Raspberry Pico you can pass in the Vendor and/or Product ID
-
+or if you are only interested in certain devices like your Arduino or Raspberry Pico you can pass either VendorID and or ProductID in base 10 or hex.
 ```C#
 SerialPortManager serialPortManager = new SerialPortManager(0x2e8a, 0x0722);
 ```
-or
+
+or just ProductID.
 ```C#
 SerialPortManager serialPortManager = new SerialPortManager(0, 0x0722);
 ```
-or
+
+or just VendorID here in base 10
 ```C#
 SerialPortManager serialPortManager = new SerialPortManager(11914);
 ```
 
-To start the port monitoring process you call 
+To start a port scan and the port monitoring process you call 
 ```C#
 serialPortManager.scan();
 ```
 
 This starts the port monitoring AND find all the ports currently connected.
 
-If are not interested in changes to the ports available and only want to find the current ports you pass in `false`
+If are not interested in changes to the ports available and only want to find the current ports you call:
 ```C#
 serialPortManager.scan(false);
 ```
+
+This will perform a single port scan and report on each matching port through the `OnPortFoundEvent`
 
 ## Complete program
 
