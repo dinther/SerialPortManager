@@ -24,7 +24,7 @@ public class SerialPortEventArgs : EventArgs
 {
     public SerialPortEventArgs(string deviceID, int vendorID, int productID)
     {
-        DeviceID = deviceID;
+        DeviceID = deviceID; //  This is the port eg. "COM1"
         VendorID = vendorID;
         ProductID = productID;
     }
