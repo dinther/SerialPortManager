@@ -42,11 +42,11 @@ public class SerialPortManager
     private static ManagementEventWatcher _watchingRemovedObject = null;
     private static WqlEventQuery _watcherQuery;
     private static ManagementScope _scope;
-    private int _vendorID;
-    private int _productID;
-    public int VendorID { get { return _vendorID; } }
-    public int ProductID { get { return _productID; } }
-    public SerialPortManager(int VendorID = 0, int ProductID = 0)
+    private uint _vendorID;
+    private uint _productID;
+    public uint VendorID { get { return _vendorID; } }
+    public uint ProductID { get { return _productID; } }
+    public SerialPortManager(uint VendorID = 0, uint ProductID = 0)
     {
         _vendorID = VendorID;
         _productID = ProductID;
@@ -148,29 +148,35 @@ public class SerialPortManager
         return new ManagementEventWatcher(_scope, _watcherQuery);
     }
 
+    private bool checkIDMatch(ManagementBaseObject managementBaseObject)
+    {
+        string PNPDeviceID = (string)managementBaseObject.GetPropertyValue("PNPDeviceID");
+        if (_vendorID + _productID != 0)
+        {
+            return ((_vendorID == 0 || PNPDeviceID.Contains("VID_" + _vendorID.ToString("X4"))) &&
+                (_productID == 0 || PNPDeviceID.Contains("PID_" + _productID.ToString("X4"))));
+        }
+        return true;
+    }
+
     private void HandlePortAdded(object sender, EventArrivedEventArgs e)
     {
         var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
         SerialPortEventArgs EventArgs = CreatePortArgs(instance);
-        
-        bool checkID = _vendorID + _productID != 0;
-        if (checkID)
+        if (checkIDMatch(instance))
         {
-            string PNPDeviceID = (string)instance.GetPropertyValue("PNPDeviceID");
-            if ((EventArgs.VendorID == 0 || PNPDeviceID.Contains("VID_" + EventArgs.VendorID.ToString("X4"))) &&
-                (EventArgs.ProductID == 0 || PNPDeviceID.Contains("VID_" + EventArgs.ProductID.ToString("X4"))))
-            {
-                DoPortAddedEvent(EventArgs);
-            }
+            DoPortAddedEvent(EventArgs);
         }
-        else DoPortAddedEvent(EventArgs);
-        
     }
 
     private void HandlePortRemoved(object sender, EventArrivedEventArgs e)
     {
         var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
-        DoPortRemovedEvent(CreatePortArgs(instance));
+        SerialPortEventArgs EventArgs = CreatePortArgs(instance);
+        if (checkIDMatch(instance))
+        {
+            DoPortRemovedEvent(CreatePortArgs(instance));
+        } 
     }
 
     private void DoPortFoundEvent(SerialPortEventArgs EventArgs)
