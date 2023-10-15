@@ -162,17 +162,15 @@ public class SerialPortManager
     private void HandlePortAdded(object sender, EventArrivedEventArgs e)
     {
         var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
-        SerialPortEventArgs EventArgs = CreatePortArgs(instance);
         if (checkIDMatch(instance))
         {
-            DoPortAddedEvent(EventArgs);
+            DoPortAddedEvent(CreatePortArgs(instance));
         }
     }
 
     private void HandlePortRemoved(object sender, EventArrivedEventArgs e)
     {
         var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
-        SerialPortEventArgs EventArgs = CreatePortArgs(instance);
         if (checkIDMatch(instance))
         {
             DoPortRemovedEvent(CreatePortArgs(instance));

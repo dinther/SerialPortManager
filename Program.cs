@@ -6,7 +6,7 @@ namespace SerialPortManagerDemo
     {
         static void Main(string[] args)
         {
-            SerialPortManager serialPortManager = new SerialPortManager(0x2E8A);
+            SerialPortManager serialPortManager = new SerialPortManager();
             serialPortManager.OnPortFoundEvent += SerialPortManager_OnPortFoundEvent;
             serialPortManager.OnPortAddedEvent += SerialPortManager_OnPortAddedEvent;
             serialPortManager.OnPortRemovedEvent += SerialPortManager_OnPortRemovedEvent;
