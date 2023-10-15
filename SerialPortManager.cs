@@ -69,7 +69,7 @@ public class SerialPortManager
             ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2", queryString);
             foreach (ManagementObject queryObj in searcher.Get())
             {
-                DoPortFoundEvent(CreatePortArgs(queryObj));
+                OnPortFoundEvent?.Invoke(this, CreatePortArgs(queryObj));
             }
             if (watchForChanges)
             {
@@ -87,26 +87,6 @@ public class SerialPortManager
     {
         _watchingAddedObject.Stop();
         _watchingRemovedObject.Stop();
-    }
-
-    private SerialPortEventArgs CreatePortArgs(ManagementBaseObject queryObj)
-    {
-        string PNPDeviceID = ((string)queryObj.GetPropertyValue("PNPDeviceID")).ToUpper();
-        int vid = 0;
-        int pid = 0;
-        int index = PNPDeviceID.IndexOf("VID_");
-        if (index > -1 && PNPDeviceID.Length >= index + 8)
-        {
-            string id = PNPDeviceID.Substring(index + 4, 4);
-            vid = Convert.ToInt32(id, 16);
-        }
-        index = PNPDeviceID.IndexOf("PID_");
-        if (index > -1 && PNPDeviceID.Length >= index + 8)
-        {
-            string id = PNPDeviceID.Substring(index + 4, 4);
-            pid = Convert.ToInt32(id, 16);
-        }
-        return new SerialPortEventArgs((string)queryObj["DeviceID"], vid, pid);
     }
 
     private void AddInsertUSBHandler()
@@ -148,13 +128,32 @@ public class SerialPortManager
         return new ManagementEventWatcher(_scope, _watcherQuery);
     }
 
-    private bool checkIDMatch(ManagementBaseObject managementBaseObject)
+    private SerialPortEventArgs CreatePortArgs(ManagementBaseObject queryObj)
     {
-        string PNPDeviceID = (string)managementBaseObject.GetPropertyValue("PNPDeviceID");
+        string PNPDeviceID = ((string)queryObj.GetPropertyValue("PNPDeviceID")).ToUpper();
+        int vid = 0;
+        int pid = 0;
+        int index = PNPDeviceID.IndexOf("VID_");
+        if (index > -1 && PNPDeviceID.Length >= index + 8)
+        {
+            string id = PNPDeviceID.Substring(index + 4, 4);
+            vid = Convert.ToInt32(id, 16);
+        }
+        index = PNPDeviceID.IndexOf("PID_");
+        if (index > -1 && PNPDeviceID.Length >= index + 8)
+        {
+            string id = PNPDeviceID.Substring(index + 4, 4);
+            pid = Convert.ToInt32(id, 16);
+        }
+        return new SerialPortEventArgs((string)queryObj["DeviceID"], vid, pid);
+    }
+
+    private bool checkIDMatch(SerialPortEventArgs serialPortEventArgs)
+    {
         if (_vendorID + _productID != 0)
         {
-            return ((_vendorID == 0 || PNPDeviceID.Contains("VID_" + _vendorID.ToString("X4"))) &&
-                (_productID == 0 || PNPDeviceID.Contains("PID_" + _productID.ToString("X4"))));
+            return ((_vendorID == 0 || serialPortEventArgs.VendorID == _vendorID) &&
+                (_productID == 0 || serialPortEventArgs.ProductID == _productID));
         }
         return true;
     }
@@ -162,42 +161,20 @@ public class SerialPortManager
     private void HandlePortAdded(object sender, EventArrivedEventArgs e)
     {
         var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
-        if (checkIDMatch(instance))
+        SerialPortEventArgs serialPortEventArgs = CreatePortArgs(instance);
+        if (checkIDMatch(serialPortEventArgs))
         {
-            DoPortAddedEvent(CreatePortArgs(instance));
+            OnPortAddedEvent?.Invoke(this, serialPortEventArgs);
         }
     }
 
     private void HandlePortRemoved(object sender, EventArrivedEventArgs e)
     {
         var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
-        if (checkIDMatch(instance))
+        SerialPortEventArgs serialPortEventArgs = CreatePortArgs(instance);
+        if (checkIDMatch(serialPortEventArgs))
         {
-            DoPortRemovedEvent(CreatePortArgs(instance));
+            OnPortRemovedEvent?.Invoke(this, serialPortEventArgs);
         } 
-    }
-
-    private void DoPortFoundEvent(SerialPortEventArgs EventArgs)
-    {
-        if (OnPortFoundEvent != null)
-        {
-            OnPortFoundEvent(this, EventArgs);
-        }
-    }
-
-    private void DoPortAddedEvent(SerialPortEventArgs EventArgs)
-    {
-        if (OnPortAddedEvent != null)
-        {
-            OnPortAddedEvent(this, EventArgs);
-        }
-    }
-
-    private void DoPortRemovedEvent(SerialPortEventArgs EventArgs)
-    {
-        if (OnPortRemovedEvent != null)
-        {
-            OnPortRemovedEvent(this, EventArgs);
-        }
     }
 }
