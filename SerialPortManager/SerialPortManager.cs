@@ -1,5 +1,4 @@
-﻿using System;
-using System.Management;
+﻿using System.Management;
 
 //  SerialPort manager for C# WPF using Windows Management Instrumentation (WMI)
 //  This monitor will produce "Port added", "Port Removed" and "Port Found" events
@@ -13,10 +12,13 @@ using System.Management;
 //
 //  You can set the VendorID and / or ProductID to filter for matching USB Virtual com ports.
 //
-//  The reason for this class is to obtain an accurate report on what serial ports are
+//  The reason I wrote this class is to obtain an accurate report on what serial ports are
 //  available. The standard method: System.IO.Ports.Serialport.getportnames() just
 //  reads the Registry and suffers from caching lag.
 //
+//  Include SerialPortManager.dll with your project and add a reference to it.
+//
+//  github https://github.com/dinther/SerialPortManager
 //  By Paul van Dinther
 
 
@@ -51,7 +53,6 @@ public class SerialPortManager
         _vendorID = VendorID;
         _productID = ProductID;
         _scope = new ManagementScope("root/CIMV2");
-        _scope.Options.EnablePrivileges = true;
         AddInsertUSBHandler();
         AddRemoveUSBHandler();
     }
@@ -121,10 +122,12 @@ public class SerialPortManager
 
     private ManagementEventWatcher USBWatcherSetUp(string eventType)
     {
-        _watcherQuery = new WqlEventQuery();
-        _watcherQuery.EventClassName = eventType;
-        _watcherQuery.WithinInterval = new TimeSpan(0, 0, 2);
-        _watcherQuery.Condition = @"TargetInstance ISA 'Win32_SerialPort'";
+        _watcherQuery = new WqlEventQuery
+        {
+            EventClassName = eventType,
+            WithinInterval = new TimeSpan(0, 0, 2),
+            Condition = @"TargetInstance ISA 'Win32_SerialPort'"
+        };
         return new ManagementEventWatcher(_scope, _watcherQuery);
     }
 
