@@ -80,4 +80,10 @@ In most cases you probably handle port found and port added with the same event 
 
 ![image](https://github.com/dinther/SerialPortManager/assets/1192916/4b4744de-5da8-4bae-9087-b4058a48fbee)
 
+## Installation
+
+This is a standard .NET 6.0 C# library. You can either add the SerialPortManager project to the dependencies of your own project or 
+add SerialPortManager.dll to the dependencies of your project.
+
+
 
