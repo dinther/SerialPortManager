@@ -5,10 +5,31 @@
     <TargetFramework>net6.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Deterministic>False</Deterministic>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Deterministic>False</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="setup.iss" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="setup.iss" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SerialPortManager\SerialPortManager.csproj" />
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="echo $(ProjectName)&#xD;&#xA;&quot;C:\Program Files (x86)\Inno Setup 6\ISCC.exe&quot; /DApplicationName=$(ProjectName) /DApplicationVersion=$(ProjectName) &quot;setup.iss&quot;" />
+  </Target>
 
 </Project>

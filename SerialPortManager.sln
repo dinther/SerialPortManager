@@ -5,7 +5,7 @@ VisualStudioVersion = 17.7.34003.232
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SerialPortManager", "SerialPortManager\SerialPortManager.csproj", "{3C0050BC-1E25-4654-AC38-F8C2C88514D9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SerialPortManagerDemo", "SerialPortManagerDemo\SerialPortManagerDemo.csproj", "{5B716BC9-6F03-4D7C-8806-B7D71EE39D49}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SerialPortManagerDemo", "SerialPortManagerDemo\SerialPortManagerDemo.csproj", "{5B716BC9-6F03-4D7C-8806-B7D71EE39D49}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
