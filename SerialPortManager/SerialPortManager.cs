@@ -21,163 +21,166 @@
 //  github https://github.com/dinther/SerialPortManager
 //  By Paul van Dinther
 
-
-public class SerialPortEventArgs : EventArgs
+namespace SerialPortManagerLib
 {
-    public SerialPortEventArgs(string deviceID, int vendorID, int productID)
-    {
-        DeviceID = deviceID; //  This is the port eg. "COM1"
-        VendorID = vendorID;
-        ProductID = productID;
-    }
-    public string DeviceID;
-    public int VendorID;
-    public int ProductID;
-}
 
-public class SerialPortManager
-{
-    public event EventHandler<SerialPortEventArgs> OnPortFoundEvent;
-    public event EventHandler<SerialPortEventArgs> OnPortAddedEvent;
-    public event EventHandler<SerialPortEventArgs> OnPortRemovedEvent;
-    private static ManagementEventWatcher _watchingAddedObject = null;
-    private static ManagementEventWatcher _watchingRemovedObject = null;
-    private static WqlEventQuery _watcherQuery;
-    private static ManagementScope _scope;
-    private uint _vendorID;
-    private uint _productID;
-    public uint VendorID { get { return _vendorID; } }
-    public uint ProductID { get { return _productID; } }
-    public SerialPortManager(uint VendorID = 0, uint ProductID = 0)
+    public class SerialPortEventArgs : EventArgs
     {
-        _vendorID = VendorID;
-        _productID = ProductID;
-        _scope = new ManagementScope("root/CIMV2");
-        AddInsertUSBHandler();
-        AddRemoveUSBHandler();
-    }
-
-    public void scanPorts(bool watchForChanges = true)
-    {
-        try
+        public SerialPortEventArgs(string deviceID, int vendorID, int productID)
         {
-            bool checkID = _vendorID + _productID != 0;
-            string queryString = "SELECT DeviceID, PNPDeviceID FROM Win32_SerialPort";
-            if (checkID) queryString += " WHERE ";
-            if (_vendorID != 0) queryString += "PNPDeviceID Like '%VID_" + _vendorID.ToString("X4") + "%'";
-            if (_vendorID != 0 && _productID != 0) queryString += " AND ";
-            if (_productID != 0) queryString += "PNPDeviceID Like '%PID_" + _productID.ToString("X4") + "%'";
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2", queryString);
-            foreach (ManagementObject queryObj in searcher.Get())
+            DeviceID = deviceID; //  This is the port eg. "COM1"
+            VendorID = vendorID;
+            ProductID = productID;
+        }
+        public string DeviceID;
+        public int VendorID;
+        public int ProductID;
+    }
+
+    public class SerialPortManager
+    {
+        public event EventHandler<SerialPortEventArgs> OnPortFoundEvent;
+        public event EventHandler<SerialPortEventArgs> OnPortAddedEvent;
+        public event EventHandler<SerialPortEventArgs> OnPortRemovedEvent;
+        private static ManagementEventWatcher _watchingAddedObject = null;
+        private static ManagementEventWatcher _watchingRemovedObject = null;
+        private static WqlEventQuery _watcherQuery;
+        private static ManagementScope _scope;
+        private uint _vendorID;
+        private uint _productID;
+        public uint VendorID { get { return _vendorID; } }
+        public uint ProductID { get { return _productID; } }
+        public SerialPortManager(uint VendorID = 0, uint ProductID = 0)
+        {
+            _vendorID = VendorID;
+            _productID = ProductID;
+            _scope = new ManagementScope("root/CIMV2");
+            AddInsertUSBHandler();
+            AddRemoveUSBHandler();
+        }
+
+        public void scanPorts(bool watchForChanges = true)
+        {
+            try
             {
-                OnPortFoundEvent?.Invoke(this, CreatePortArgs(queryObj));
+                bool checkID = _vendorID + _productID != 0;
+                string queryString = "SELECT DeviceID, PNPDeviceID FROM Win32_SerialPort";
+                if (checkID) queryString += " WHERE ";
+                if (_vendorID != 0) queryString += "PNPDeviceID Like '%VID_" + _vendorID.ToString("X4") + "%'";
+                if (_vendorID != 0 && _productID != 0) queryString += " AND ";
+                if (_productID != 0) queryString += "PNPDeviceID Like '%PID_" + _productID.ToString("X4") + "%'";
+                ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2", queryString);
+                foreach (ManagementObject queryObj in searcher.Get())
+                {
+                    OnPortFoundEvent?.Invoke(this, CreatePortArgs(queryObj));
+                }
+                if (watchForChanges)
+                {
+                    _watchingAddedObject.Start();
+                    _watchingRemovedObject.Start();
+                }
             }
-            if (watchForChanges)
+            catch (ManagementException e)
             {
-                _watchingAddedObject.Start();
-                _watchingRemovedObject.Start();
+                Console.WriteLine("An error occurred while querying for WMI data: " + e.Message);
             }
         }
-        catch (ManagementException e)
-        {
-            Console.WriteLine("An error occurred while querying for WMI data: " + e.Message);
-        }
-    }
 
-    public void stop()
-    {
-        _watchingAddedObject.Stop();
-        _watchingRemovedObject.Stop();
-    }
+        public void stop()
+        {
+            _watchingAddedObject.Stop();
+            _watchingRemovedObject.Stop();
+        }
 
-    private void AddInsertUSBHandler()
-    {
-        try
+        private void AddInsertUSBHandler()
         {
-            _watchingAddedObject = USBWatcherSetUp("__InstanceCreationEvent");
-            _watchingAddedObject.EventArrived += new EventArrivedEventHandler(HandlePortAdded);
+            try
+            {
+                _watchingAddedObject = USBWatcherSetUp("__InstanceCreationEvent");
+                _watchingAddedObject.EventArrived += new EventArrivedEventHandler(HandlePortAdded);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                if (_watchingAddedObject != null)
+                    _watchingAddedObject.Stop();
+            }
         }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-            if (_watchingAddedObject != null)
-                _watchingAddedObject.Stop();
-        }
-    }
 
-    private void AddRemoveUSBHandler()
-    {
-        try
+        private void AddRemoveUSBHandler()
         {
-            _watchingRemovedObject = USBWatcherSetUp("__InstanceDeletionEvent");
-            _watchingRemovedObject.EventArrived += new EventArrivedEventHandler(HandlePortRemoved);
+            try
+            {
+                _watchingRemovedObject = USBWatcherSetUp("__InstanceDeletionEvent");
+                _watchingRemovedObject.EventArrived += new EventArrivedEventHandler(HandlePortRemoved);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                if (_watchingRemovedObject != null)
+                    _watchingRemovedObject.Stop();
+            }
         }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-            if (_watchingRemovedObject != null)
-                _watchingRemovedObject.Stop();
-        }
-    }
 
-    private ManagementEventWatcher USBWatcherSetUp(string eventType)
-    {
-        _watcherQuery = new WqlEventQuery
+        private ManagementEventWatcher USBWatcherSetUp(string eventType)
         {
-            EventClassName = eventType,
-            WithinInterval = new TimeSpan(0, 0, 2),
-            Condition = @"TargetInstance ISA 'Win32_SerialPort'"
-        };
-        return new ManagementEventWatcher(_scope, _watcherQuery);
-    }
-
-    private SerialPortEventArgs CreatePortArgs(ManagementBaseObject queryObj)
-    {
-        string PNPDeviceID = ((string)queryObj.GetPropertyValue("PNPDeviceID")).ToUpper();
-        int vid = 0;
-        int pid = 0;
-        int index = PNPDeviceID.IndexOf("VID_");
-        if (index > -1 && PNPDeviceID.Length >= index + 8)
-        {
-            string id = PNPDeviceID.Substring(index + 4, 4);
-            vid = Convert.ToInt32(id, 16);
+            _watcherQuery = new WqlEventQuery
+            {
+                EventClassName = eventType,
+                WithinInterval = new TimeSpan(0, 0, 2),
+                Condition = @"TargetInstance ISA 'Win32_SerialPort'"
+            };
+            return new ManagementEventWatcher(_scope, _watcherQuery);
         }
-        index = PNPDeviceID.IndexOf("PID_");
-        if (index > -1 && PNPDeviceID.Length >= index + 8)
-        {
-            string id = PNPDeviceID.Substring(index + 4, 4);
-            pid = Convert.ToInt32(id, 16);
-        }
-        return new SerialPortEventArgs((string)queryObj["DeviceID"], vid, pid);
-    }
 
-    private bool checkIDMatch(SerialPortEventArgs serialPortEventArgs)
-    {
-        if (_vendorID + _productID != 0)
+        private SerialPortEventArgs CreatePortArgs(ManagementBaseObject queryObj)
         {
-            return ((_vendorID == 0 || serialPortEventArgs.VendorID == _vendorID) &&
-                (_productID == 0 || serialPortEventArgs.ProductID == _productID));
+            string PNPDeviceID = ((string)queryObj.GetPropertyValue("PNPDeviceID")).ToUpper();
+            int vid = 0;
+            int pid = 0;
+            int index = PNPDeviceID.IndexOf("VID_");
+            if (index > -1 && PNPDeviceID.Length >= index + 8)
+            {
+                string id = PNPDeviceID.Substring(index + 4, 4);
+                vid = Convert.ToInt32(id, 16);
+            }
+            index = PNPDeviceID.IndexOf("PID_");
+            if (index > -1 && PNPDeviceID.Length >= index + 8)
+            {
+                string id = PNPDeviceID.Substring(index + 4, 4);
+                pid = Convert.ToInt32(id, 16);
+            }
+            return new SerialPortEventArgs((string)queryObj["DeviceID"], vid, pid);
         }
-        return true;
-    }
 
-    private void HandlePortAdded(object sender, EventArrivedEventArgs e)
-    {
-        var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
-        SerialPortEventArgs serialPortEventArgs = CreatePortArgs(instance);
-        if (checkIDMatch(serialPortEventArgs))
+        private bool checkIDMatch(SerialPortEventArgs serialPortEventArgs)
         {
-            OnPortAddedEvent?.Invoke(this, serialPortEventArgs);
+            if (_vendorID + _productID != 0)
+            {
+                return ((_vendorID == 0 || serialPortEventArgs.VendorID == _vendorID) &&
+                    (_productID == 0 || serialPortEventArgs.ProductID == _productID));
+            }
+            return true;
         }
-    }
 
-    private void HandlePortRemoved(object sender, EventArrivedEventArgs e)
-    {
-        var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
-        SerialPortEventArgs serialPortEventArgs = CreatePortArgs(instance);
-        if (checkIDMatch(serialPortEventArgs))
+        private void HandlePortAdded(object sender, EventArrivedEventArgs e)
         {
-            OnPortRemovedEvent?.Invoke(this, serialPortEventArgs);
-        } 
+            var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
+            SerialPortEventArgs serialPortEventArgs = CreatePortArgs(instance);
+            if (checkIDMatch(serialPortEventArgs))
+            {
+                OnPortAddedEvent?.Invoke(this, serialPortEventArgs);
+            }
+        }
+
+        private void HandlePortRemoved(object sender, EventArrivedEventArgs e)
+        {
+            var instance = e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
+            SerialPortEventArgs serialPortEventArgs = CreatePortArgs(instance);
+            if (checkIDMatch(serialPortEventArgs))
+            {
+                OnPortRemovedEvent?.Invoke(this, serialPortEventArgs);
+            }
+        }
     }
 }
