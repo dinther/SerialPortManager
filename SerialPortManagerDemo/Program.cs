@@ -17,6 +17,8 @@
 //  github https://github.com/dinther/SerialPortManager
 //  By Paul van Dinther
 
+using SerialPortManagerLib;
+
 SerialPortManager serialPortManager = new SerialPortManager();
 serialPortManager.OnPortFoundEvent += SerialPortManager_OnPortFoundEvent;
 serialPortManager.OnPortAddedEvent += SerialPortManager_OnPortAddedEvent;
